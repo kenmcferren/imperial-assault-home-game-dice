@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<title>Assault Dice Tray</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#0b0c0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Assault Dice">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Oswald:wght@500;600;700&display=swap">
+<style>
+/* Layout: one-screen column. Dice rack on top, recessed polished-metal tray, steel roll plate, tally strip at the bottom. */
+:root {
+  color-scheme: dark;
+  --metal-0: #060709;
+  --metal-1: #0e1013;
+  --metal-2: #181b1f;
+  --metal-3: #262a30;
+  --ink: #dde2e8;
+  --ink-dim: #848b95;
+  --amber: #f1b73c;
+  --plate-hi: #d7dce3;
+  --plate-lo: #848c97;
+  --plate-ink: #111316;
+
+  --f-display: "Oswald", "Arial Narrow", Impact, sans-serif;
+  --f-ui: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+
+  --sx: 0;      /* sheen position, set by script from tilt */
+  --refl: .05;  /* reflection strength */
+  --rx: 0px;
+  --ry: 0px;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+html { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  margin: 0;
+  background: var(--metal-1);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-size: 15px;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; touch-action: manipulation; }
+button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+/* ---------- metal backdrop ---------- */
+.metal, .brush, .sheen, .vignette { position: fixed; inset: 0; pointer-events: none; }
+.metal {
+  background:
+    radial-gradient(130% 70% at 50% -10%, #262a30 0%, transparent 60%),
+    linear-gradient(180deg, #15171b 0%, #0b0c0f 55%, #101216 100%);
+}
+.brush {
+  opacity: .5;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.85' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .6 0 0 0 0 .62 0 0 0 0 .66 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.sheen {
+  left: -100%; width: 300%; top: -10%; bottom: -10%;
+  background: linear-gradient(104deg,
+    transparent 36%,
+    rgba(170,185,205,.04) 44%,
+    rgba(220,230,245,.11) 49.5%,
+    rgba(170,185,205,.04) 55%,
+    transparent 63%);
+  transform: translate3d(calc(var(--sx) * 33.33%), 0, 0);
+  will-change: transform;
+}
+.vignette { background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0,0,0,.6) 100%); }
+
+/* ---------- app column ---------- */
+.app {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px 12px;
+}
+
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 34px; }
+.top h1 {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(0,0,0,.8), 0 -1px 0 rgba(255,255,255,.06);
+}
+.top h1 span { color: var(--ink-dim); font-weight: 500; }
+.ghost {
+  font-size: 13px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-dim);
+  padding: 8px 12px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.03);
+}
+.ghost:active { background: rgba(255,255,255,.08); color: var(--ink); }
+.ghost:disabled { opacity: .35; }
+
+/* ---------- dice rack ---------- */
+.rack { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.pick { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 4px; }
+.pick .die-body { --ds: 100%; width: 100%; max-width: 52px; height: auto; aspect-ratio: 1; }
+.pick:active .die-body { transform: translateY(2px) scale(.96); }
+.pick:disabled { opacity: .4; cursor: default; }
+.pick-name { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); }
+.pick-n {
+  position: absolute; top: -2px; right: calc(50% - 32px);
+  min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--amber); color: #1a1204;
+  font-family: var(--f-display); font-weight: 600; font-size: 13px; line-height: 20px; text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,.6);
+}
+.pick-n[data-n="0"] { display: none; }
+
+/* ---------- dice faces ---------- */
+.die-body {
+  --ds: 74px;
+  display: block;
+  position: relative;
+  width: var(--ds); height: var(--ds);
+  border-radius: 17%;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,.45),
+    inset 0 -3px 6px rgba(0,0,0,.35),
+    0 5px 10px rgba(0,0,0,.65),
+    0 1px 2px rgba(0,0,0,.8);
+  transition: transform .12s;
+}
+.die-body.red    { background: linear-gradient(180deg, #ff3a2c 0%, #e01f1e 45%, #b8121a 100%); color: #fff; }
+.die-body.blue   { background: linear-gradient(180deg, #78bdee 0%, #2f68c6 45%, #0b2a8f 100%); color: #fff; }
+.die-body.green  { background: linear-gradient(180deg, #45ec2f 0%, #1bc414 50%, #0f9a10 100%); color: #fff; }
+.die-body.yellow { background: linear-gradient(180deg, #fbd651 0%, #f2c31f 50%, #dfa90a 100%); color: #0b0b0b; }
+.die-body.black  { background: linear-gradient(180deg, #444 0%, #1a1a1a 45%, #030303 100%); color: #fff; }
+.die-body.white  {
+  background: linear-gradient(180deg, #ffffff 0%, #ececec 55%, #d3d3d3 100%); color: #0a0a0a;
+  box-shadow:
+    inset 0 0 0 3px #c7c7c7,
+    inset 0 -3px 6px rgba(0,0,0,.18),
+    0 5px 10px rgba(0,0,0,.65),
+    0 1px 2px rgba(0,0,0,.8);
+}
+.die-body .ic {
+  position: absolute; transform: translate(-50%, -50%);
+  fill: currentColor; overflow: visible;
+}
+.die-body.red .ic, .die-body.blue .ic, .die-body.green .ic, .die-body.black .ic { filter: drop-shadow(0 1px 0 rgba(0,0,0,.28)); }
+.die-body .num {
+  position: absolute; left: 72%; top: 50%;
+  transform: translate(-50%, -52%);
+  font-family: var(--f-display); font-weight: 600;
+  font-size: calc(var(--ds) * .5); line-height: 1;
+}
+.pick .die-body .ic { opacity: .9; }
+/* an unrolled die in the tray: dashed inset ring */
+.die-body.unrolled::after {
+  content: ""; position: absolute; inset: 22%;
+  border: 2px dashed currentColor; border-radius: 50%; opacity: .45;
+}
+
+/* ---------- tray ---------- */
+.tray-wrap {
+  position: relative;
+  flex: 1 1 auto; min-height: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.22) 70%, rgba(0,0,0,.35));
+  box-shadow:
+    inset 0 3px 14px rgba(0,0,0,.9),
+    inset 0 -1px 0 rgba(255,255,255,.06),
+    0 1px 0 rgba(255,255,255,.07);
+}
+/* polished floor: a brighter streak that slides with the tilt */
+.tray-wrap::before {
+  content: ""; position: absolute; top: -20%; bottom: -20%; left: -100%; width: 300%;
+  pointer-events: none;
+  background: linear-gradient(104deg,
+    transparent 40%,
+    rgba(160,175,200,.05) 46%,
+    rgba(230,238,250,.14) 50%,
+    rgba(160,175,200,.05) 54%,
+    transparent 60%);
+  transform: translate3d(calc(var(--sx) * 33.33%), 0, 0);
+  will-change: transform;
+}
+.tray-scroll { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.grid {
+  --ds: 74px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--ds));
+  justify-content: center;
+  gap: calc(var(--ds) * .52) 20px;
+  padding: 24px 12px calc(var(--ds) * .6);
+}
+.grid.many { --ds: 60px; gap: calc(var(--ds) * .5) 14px; }
+.slot { position: relative; width: var(--ds); height: var(--ds); }
+.slot .die { display: block; width: 100%; height: 100%; border-radius: 17%; }
+.slot .die-body { --ds: inherit; width: 100%; height: 100%; }
+/* contact shadow on the metal */
+.slot::before {
+  content: ""; position: absolute; left: 8%; right: 8%; bottom: -5px; height: 10px;
+  background: radial-gradient(closest-side, rgba(0,0,0,.75), transparent);
+  pointer-events: none;
+}
+/* the mirrored die in the polished floor */
+.refl {
+  position: absolute; left: 0; top: calc(100% + 3px);
+  width: 100%; height: 100%;
+  pointer-events: none;
+  opacity: var(--refl);
+  transform: translate3d(var(--rx), var(--ry), 0) scaleY(-1);
+  filter: blur(2.6px) saturate(.85);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,.95) 0%, rgba(0,0,0,.35) 30%, transparent 62%);
+          mask-image: linear-gradient(to top, rgba(0,0,0,.95) 0%, rgba(0,0,0,.35) 30%, transparent 62%);
+}
+.refl .die-body { box-shadow: none; }
+.die-x {
+  position: absolute; top: -9px; right: -9px; z-index: 2;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--metal-3); color: var(--ink);
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 2px 5px rgba(0,0,0,.7);
+  font-size: 16px; line-height: 1; display: grid; place-items: center;
+}
+.die-x::before { content: ""; position: absolute; inset: -8px; }
+.die-x svg { width: 10px; height: 10px; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.slot.rolling .die-x { visibility: hidden; }
+
+.rolling .die-body { animation: tumble .62s cubic-bezier(.2,.7,.3,1) both; animation-delay: var(--delay, 0ms); }
+@keyframes tumble {
+  0%   { transform: translate(var(--jx, -10px), -18px) rotate(var(--jr, -38deg)) scale(.86); }
+  30%  { transform: translate(calc(var(--jx, -10px) * -.4), 4px) rotate(calc(var(--jr, -38deg) * -.45)) scale(1.05); }
+  55%  { transform: translate(0, -3px) rotate(calc(var(--jr, -38deg) * .18)) scale(.99); }
+  78%  { transform: translate(0, 1px) rotate(calc(var(--jr, -38deg) * -.05)) scale(1.01); }
+  100% { transform: none; }
+}
+.slot.fresh .die-body { animation: drop .28s ease-out both; }
+@keyframes drop { from { transform: translateY(-14px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.empty {
+  position: absolute; inset: 0; margin: 0;
+  display: grid; place-items: center; text-align: center; padding: 24px;
+  font-size: 16px; letter-spacing: .04em; color: var(--ink-dim); line-height: 1.4;
+}
+
+/* ---------- roll plate ---------- */
+.hint { margin: -2px 0 0; text-align: center; font-size: 12.5px; letter-spacing: .08em; color: var(--ink-dim); }
+.roll {
+  position: relative; flex: 0 0 auto;
+  height: 58px; border-radius: 12px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--plate-hi) 0%, #aab1bb 50%, var(--plate-lo) 100%);
+  color: var(--plate-ink);
+  font-family: var(--f-display); font-weight: 600; font-size: 22px;
+  letter-spacing: .16em; text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255,255,255,.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.75),
+    inset 0 -2px 0 rgba(0,0,0,.28),
+    0 6px 14px rgba(0,0,0,.7),
+    0 1px 2px rgba(0,0,0,.9);
+  transition: transform .08s, box-shadow .08s;
+}
+.roll small { font-family: var(--f-ui); font-weight: 600; font-size: 14px; letter-spacing: .12em; opacity: .7; margin-left: 6px; }
+.roll:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -1px 0 rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.7); }
+.roll:disabled { opacity: .4; cursor: default; }
+
+/* ---------- tally ---------- */
+.tally { flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; min-height: 130px; }
+.tally-head { display: flex; align-items: center; justify-content: space-between; min-height: 28px; }
+.tally-head .label { font-size: 12px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-dim); }
+.tally-head .ghost { padding: 5px 10px; font-size: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  position: relative;
+  flex: 1 1 calc(33.333% - 8px);
+  min-width: 96px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 11px;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow: 0 2px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+  text-align: left;
+  transition: opacity .15s, transform .08s;
+}
+.chip:active { transform: scale(.97); }
+.chip svg { flex: 0 0 auto; width: 28px; height: 28px; fill: var(--ink); }
+.chip.acc svg { fill: none; stroke: var(--amber); }
+.chip .txt { display: flex; flex-direction: column; min-width: 0; }
+.chip .n { font-family: var(--f-display); font-weight: 600; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.chip.acc .n { color: var(--amber); }
+.chip .name { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); margin-top: 2px; }
+.chip.zero { opacity: .35; }
+.chip.spent .n::after { content: attr(data-of); font-size: 13px; color: var(--ink-dim); margin-left: 3px; letter-spacing: .02em; }
+.pop {
+  position: absolute; right: 8px; top: -6px; pointer-events: none;
+  font-family: var(--f-display); font-weight: 600; font-size: 16px; color: var(--amber);
+  animation: pop .6s ease-out forwards;
+}
+@keyframes pop { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-16px); } }
+.tally-empty { margin: 0; padding: 16px 4px; text-align: center; color: var(--ink-dim); font-size: 15px; letter-spacing: .04em; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+  transform: translate(-50%, 20px); opacity: 0;
+  padding: 10px 16px; border-radius: 10px;
+  background: var(--metal-3); color: var(--ink); border: 1px solid rgba(255,255,255,.14);
+  font-size: 15px; letter-spacing: .03em; white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0,0,0,.7);
+  transition: opacity .2s, transform .2s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-height: 640px) {
+  .app { gap: 8px; }
+  .grid { --ds: 64px; }
+  .roll { height: 50px; }
+  .chip { padding: 6px 8px; }
+  .chip .n { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rolling .die-body, .slot.fresh .die-body, .pop { animation: none; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-dmg" viewBox="0 0 100 100">
+    <path fill-rule="evenodd" d="M8 8 Q50 34 92 8 Q66 50 92 92 Q50 66 8 92 Q34 50 8 8 Z M37 35 Q50 31 63 35 Q69 50 63 65 Q50 69 37 65 Q31 50 37 35 Z"/>
+  </symbol>
+  <symbol id="i-surge" viewBox="0 0 100 100">
+    <path d="M3 77 L34 40 L52 58 L97 17 L56 74 L37 57 Z"/>
+  </symbol>
+  <symbol id="i-block" viewBox="0 0 100 100">
+    <path d="M7 16 Q50 31 93 16 Q62 38 50 95 Q38 38 7 16 Z"/>
+  </symbol>
+  <symbol id="i-evade" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="33" fill="none" stroke="currentColor" stroke-width="17" stroke-dasharray="90 13.67" transform="rotate(-30 50 50)"/>
+  </symbol>
+  <symbol id="i-dodge" viewBox="0 0 100 100">
+    <path id="dodge-path" fill-rule="evenodd" d="M6 50a44 44 0 1 0 88 0a44 44 0 1 0 -88 0Z"/>
+  </symbol>
+  <symbol id="i-acc" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="28" stroke-width="9"/>
+    <circle cx="50" cy="50" r="6" stroke-width="9"/>
+    <path d="M50 4v24M50 72v24M4 50h24M72 50h24" stroke-width="9" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<div class="metal"></div>
+<div class="brush"></div>
+<div class="sheen"></div>
+<div class="vignette"></div>
+
+<main class="app">
+  <header class="top">
+    <h1>Assault <span>Dice</span></h1>
+    <button class="ghost" id="clear" type="button">Clear</button>
+  </header>
+
+  <section class="rack" id="rack" aria-label="Add dice to your pool"></section>
+
+  <section class="tray-wrap" aria-label="Dice pool">
+    <div class="tray-scroll" id="tray">
+      <div class="grid" id="grid"></div>
+    </div>
+    <p class="empty" id="empty" hidden>Tap a die above<br>to add it to your pool.</p>
+  </section>
+
+  <p class="hint" id="hint">Tap a die to reroll just that one</p>
+  <button class="roll" id="roll" type="button">Roll</button>
+
+  <section class="tally" aria-label="Results">
+    <div class="tally-head">
+      <span class="label">Results · tap to spend</span>
+      <button class="ghost" id="restore" type="button" hidden>Restore</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </section>
+  <p class="sr" id="live" aria-live="polite"></p>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------- dice definitions (faces read off the physical dice) ----------
+     d = damage, s = surge, a = accuracy, b = block, e = evade, x = dodge */
+  const DICE = {
+    red:    { label: 'Red',    acc: false, faces: [{d:1},{d:2},{d:2},{d:2,s:1},{d:3},{d:3}] },
+    blue:   { label: 'Blue',   acc: true,  faces: [{s:1,a:2},{d:1,a:2},{d:2,a:3},{d:1,s:1,a:3},{d:2,a:4},{d:1,a:5}] },
+    green:  { label: 'Green',  acc: true,  faces: [{s:1,a:1},{d:1,s:1,a:1},{d:2,a:1},{d:1,s:1,a:2},{d:2,a:2},{d:2,a:3}] },
+    yellow: { label: 'Yellow', acc: true,  faces: [{s:1},{d:1,s:2},{d:2,a:1},{d:1,s:1,a:1},{s:1,a:2},{d:1,a:2}] },
+    black:  { label: 'Black',  acc: false, faces: [{b:1},{b:1},{b:2},{b:2},{b:3},{e:1}] },
+    white:  { label: 'White',  acc: false, faces: [{},{b:1},{e:1},{b:1,e:1},{b:1,e:1},{x:1}] },
+  };
+  const COLORS = Object.keys(DICE);
+  const ICON = { d: 'i-dmg', s: 'i-surge', b: 'i-block', e: 'i-evade', x: 'i-dodge', a: 'i-acc' };
+  const NAME = { a: 'Accuracy', d: 'Damage', s: 'Surge', b: 'Block', e: 'Evade', x: 'Dodge' };
+  const SYMS = ['d', 's', 'b', 'e', 'x'];
+  const MAX_POOL = 12;
+  const KEY = 'assault-dice-tray-v1';
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Dodge: a disc with an X cut through it
+  (function buildDodge() {
+    const w = 8, L = 43.4, r = Math.SQRT1_2, c = 50;
+    const pts = [[w,-L],[w,-w],[L,-w],[L,w],[w,w],[w,L],[-w,L],[-w,w],[-L,w],[-L,-w],[-w,-w],[-w,-L]];
+    const cross = 'M' + pts.map(([x, y]) => (c + (x - y) * r).toFixed(2) + ' ' + (c + (x + y) * r).toFixed(2)).join('L') + 'Z';
+    document.getElementById('dodge-path').setAttribute('d', 'M6 50a44 44 0 1 0 88 0a44 44 0 1 0 -88 0Z' + cross);
+  })();
+
+  /* ---------- state ---------- */
+  let S = load() || null;
+  let busy = false;
+
+  function load() {
+    try {
+      const j = JSON.parse(localStorage.getItem(KEY));
+      if (!j || !Array.isArray(j.pool)) return null;
+      j.pool = j.pool.filter(p => DICE[p.c] && (p.f === null || (p.f >= 0 && p.f < 6))).slice(0, MAX_POOL);
+      j.spent = j.spent || {};
+      j.nid = j.nid || (Math.max(0, ...j.pool.map(p => p.id)) + 1);
+      return j;
+    } catch (e) { return null; }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+  }
+  function rnd6() {
+    try { return crypto.getRandomValues(new Uint32Array(1))[0] % 6; } catch (e) { return Math.floor(Math.random() * 6); }
+  }
+
+  /* ---------- face drawing ---------- */
+  const POS = {
+    plain: { 1: [[50,50,56]], 2: [[31,31,44],[69,69,44]], 3: [[29,31,40],[71,31,40],[50,71,40]] },
+    num:   { 1: [[29,50,40]], 2: [[29,28,37],[29,72,37]] },
+  };
+  function faceSyms(f) {
+    const out = [];
+    const push = k => { for (let i = 0; i < (f[k] || 0); i++) out.push(k); };
+    if ((f.s || 0) > (f.d || 0)) { push('s'); push('d'); } else { push('d'); push('s'); }
+    push('b'); push('e'); push('x');
+    return out;
+  }
+  function faceHTML(color, fi) {
+    if (fi === null || fi === undefined) return '';
+    const f = DICE[color].faces[fi];
+    const syms = faceSyms(f);
+    const hasNum = (f.a || 0) > 0;
+    const table = hasNum ? POS.num : POS.plain;
+    const pos = table[syms.length] || [];
+    let h = '';
+    syms.forEach((k, i) => {
+      const p = pos[i]; if (!p) return;
+      h += `<svg class="ic" viewBox="0 0 100 100" style="left:${p[0]}%;top:${p[1]}%;width:${p[2]}%;height:${p[2]}%"><use href="#${ICON[k]}"/></svg>`;
+    });
+    if (hasNum) h += `<span class="num">${f.a}</span>`;
+    return h;
+  }
+  function faceLabel(color, fi) {
+    if (fi === null) return `${DICE[color].label} die, not rolled yet`;
+    const f = DICE[color].faces[fi];
+    const parts = [];
+    for (const k of SYMS) if (f[k]) parts.push(`${f[k]} ${NAME[k].toLowerCase()}`);
+    if (f.a) parts.push(`${f.a} accuracy`);
+    return `${DICE[color].label} die: ${parts.length ? parts.join(', ') : 'blank'}`;
+  }
+
+  /* ---------- totals ---------- */
+  function totals() {
+    const base = { a: 0, d: 0, s: 0, b: 0, e: 0, x: 0 };
+    let rolled = 0, accRolled = false;
+    for (const p of S.pool) {
+      if (p.f === null) continue;
+      rolled++;
+      if (DICE[p.c].acc) accRolled = true;
+      const f = DICE[p.c].faces[p.f];
+      for (const k in base) base[k] += f[k] || 0;
+    }
+    return { base, rolled, accRolled };
+  }
+  function clampSpent(base) {
+    for (const k in S.spent) S.spent[k] = Math.max(0, Math.min(S.spent[k] | 0, base[k] || 0));
+  }
+
+  /* ---------- rendering ---------- */
+  const $ = id => document.getElementById(id);
+  const rack = $('rack'), grid = $('grid'), empty = $('empty'), chips = $('chips');
+  const rollBtn = $('roll'), clearBtn = $('clear'), restoreBtn = $('restore'), hint = $('hint'), live = $('live');
+
+  function renderRack() {
+    const counts = {};
+    for (const p of S.pool) counts[p.c] = (counts[p.c] || 0) + 1;
+    const full = S.pool.length >= MAX_POOL;
+    rack.innerHTML = COLORS.map(c => {
+      const n = counts[c] || 0;
+      const isDef = c === 'black' || c === 'white';
+      const glyph = `<svg class="ic" viewBox="0 0 100 100" style="left:50%;top:50%;width:44%;height:44%"><use href="#${isDef ? 'i-block' : 'i-dmg'}"/></svg>`;
+      return `<button class="pick" type="button" data-c="${c}" ${full ? 'disabled' : ''} aria-label="Add ${DICE[c].label.toLowerCase()} die${n ? `, ${n} in pool` : ''}">
+        <span class="die-body ${c}">${glyph}</span>
+        <span class="pick-n" data-n="${n}">${n}</span>
+        <span class="pick-name">${DICE[c].label}</span>
+      </button>`;
+    }).join('');
+  }
+
+  function slotHTML(p, fresh) {
+    const face = faceHTML(p.c, p.f);
+    const un = p.f === null ? ' unrolled' : '';
+    return `<div class="slot${fresh ? ' fresh' : ''}" data-id="${p.id}">
+      <button class="die" type="button" aria-label="${faceLabel(p.c, p.f)}. Tap to ${p.f === null ? 'roll' : 'reroll'}.">
+        <span class="die-body ${p.c}${un}">${face}</span>
+      </button>
+      <div class="refl" aria-hidden="true"><span class="die-body ${p.c}${un}">${face}</span></div>
+      <button class="die-x" type="button" aria-label="Remove ${DICE[p.c].label.toLowerCase()} die"><svg viewBox="0 0 10 10"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button>
+    </div>`;
+  }
+
+  function renderTray(freshId) {
+    grid.classList.toggle('many', S.pool.length > 8);
+    grid.innerHTML = S.pool.map(p => slotHTML(p, p.id === freshId && !reduceMotion)).join('');
+    empty.hidden = S.pool.length > 0;
+    const n = S.pool.length;
+    rollBtn.disabled = n === 0;
+    rollBtn.innerHTML = n ? `Roll<small>${n} ${n === 1 ? 'die' : 'dice'}</small>` : 'Roll';
+    clearBtn.disabled = n === 0;
+    hint.style.visibility = n ? 'visible' : 'hidden';
+  }
+
+  function chipHTML(k, cur, base) {
+    const zero = cur === 0 ? ' zero' : '';
+    const spent = cur < base ? ' spent' : '';
+    return `<button class="chip${k === 'a' ? ' acc' : ''}${zero}${spent}" type="button" data-k="${k}" aria-label="${NAME[k]} ${cur}${cur < base ? ` of ${base}` : ''}. Tap to reduce by one.">
+      <svg viewBox="0 0 100 100"><use href="#${ICON[k]}"/></svg>
+      <span class="txt"><span class="n" data-of="/${base}">${cur}</span><span class="name">${NAME[k]}</span></span>
+    </button>`;
+  }
+
+  function renderTally() {
+    const { base, rolled, accRolled } = totals();
+    clampSpent(base);
+    if (!rolled) {
+      chips.innerHTML = `<p class="tally-empty">${S.pool.length ? 'Roll to see your symbols.' : 'Add dice, then roll.'}</p>`;
+      restoreBtn.hidden = true;
+      live.textContent = '';
+      return;
+    }
+    const keys = [];
+    if (accRolled) keys.push('a');
+    for (const k of SYMS) if (base[k] > 0) keys.push(k);
+    if (!keys.length) {
+      chips.innerHTML = `<p class="tally-empty">Blank roll. No symbols.</p>`;
+    } else {
+      chips.innerHTML = keys.map(k => chipHTML(k, Math.max(0, base[k] - (S.spent[k] || 0)), base[k])).join('');
+    }
+    restoreBtn.hidden = !Object.values(S.spent).some(v => v > 0);
+    live.textContent = keys.map(k => `${NAME[k]} ${Math.max(0, base[k] - (S.spent[k] || 0))}`).join(', ') || 'Blank roll';
+  }
+
+  function renderAll(freshId) { renderRack(); renderTray(freshId); renderTally(); }
+
+  /* ---------- actions ---------- */
+  function addDie(c) {
+    if (busy || S.pool.length >= MAX_POOL) return;
+    const id = S.nid++;
+    S.pool.push({ id, c, f: null });
+    // keep attack dice before defense dice, in rack order
+    S.pool.sort((p, q) => COLORS.indexOf(p.c) - COLORS.indexOf(q.c) || p.id - q.id);
+    renderAll(id);
+    save();
+    buzz(8);
+  }
+  function removeDie(id) {
+    if (busy) return;
+    S.pool = S.pool.filter(p => p.id !== id);
+    renderAll();
+    save();
+  }
+  function clearPool() {
+    if (busy) return;
+    S.pool = []; S.spent = {};
+    renderAll();
+    save();
+  }
+
+  function setFace(slot, c, fi, settled) {
+    const html = faceHTML(c, fi);
+    slot.querySelectorAll('.die-body').forEach(b => {
+      b.innerHTML = html;
+      b.classList.toggle('unrolled', fi === null);
+    });
+    if (settled) slot.querySelector('.die').setAttribute('aria-label', faceLabel(c, fi) + '. Tap to reroll.');
+  }
+
+  function rollIds(ids, resetSpent) {
+    if (busy || !ids.length) return;
+    busy = true;
+    if (resetSpent) S.spent = {};
+    buzz([12, 30, 12]);
+    const finals = new Map(ids.map(id => [id, rnd6()]));
+    if (reduceMotion) {
+      for (const p of S.pool) if (finals.has(p.id)) p.f = finals.get(p.id);
+      busy = false;
+      renderTray(); renderTally(); save();
+      return;
+    }
+    let pending = ids.length;
+    ids.forEach((id, i) => {
+      const p = S.pool.find(q => q.id === id);
+      const slot = grid.querySelector(`.slot[data-id="${id}"]`);
+      if (!p || !slot) { pending--; return; }
+      const delay = i * 55;
+      slot.classList.remove('rolling', 'fresh');
+      void slot.offsetWidth; // restart animation
+      slot.style.setProperty('--delay', delay + 'ms');
+      slot.style.setProperty('--jx', (Math.random() * 24 - 12).toFixed(1) + 'px');
+      slot.style.setProperty('--jr', ((Math.random() < .5 ? -1 : 1) * (25 + Math.random() * 40)).toFixed(0) + 'deg');
+      slot.classList.add('rolling');
+      let last = -1;
+      const flick = setInterval(() => {
+        let f; do { f = rnd6(); } while (f === last); last = f;
+        setFace(slot, p.c, f, false);
+      }, 70);
+      setTimeout(() => {
+        clearInterval(flick);
+        p.f = finals.get(id);
+        setFace(slot, p.c, p.f, true);
+        setTimeout(() => slot.classList.remove('rolling'), 260);
+        if (--pending === 0) {
+          busy = false;
+          renderTally();
+          save();
+          buzz(10);
+        }
+      }, 400 + delay);
+    });
+    if (pending === 0) { busy = false; renderTally(); save(); }
+  }
+
+  function spend(k, chip) {
+    const { base } = totals();
+    const cur = base[k] - (S.spent[k] || 0);
+    if (cur <= 0) return;
+    S.spent[k] = (S.spent[k] || 0) + 1;
+    renderTally();
+    save();
+    buzz(6);
+    const again = chips.querySelector(`.chip[data-k="${k}"]`);
+    if (again && !reduceMotion) {
+      const pop = document.createElement('span');
+      pop.className = 'pop'; pop.textContent = '−1';
+      again.appendChild(pop);
+      setTimeout(() => pop.remove(), 650);
+    }
+  }
+
+  function buzz(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+
+  /* ---------- events ---------- */
+  rack.addEventListener('click', e => {
+    const b = e.target.closest('.pick'); if (b) addDie(b.dataset.c);
+  });
+  grid.addEventListener('click', e => {
+    const slot = e.target.closest('.slot'); if (!slot) return;
+    const id = +slot.dataset.id;
+    if (e.target.closest('.die-x')) removeDie(id);
+    else if (e.target.closest('.die')) rollIds([id], false);
+  });
+  rollBtn.addEventListener('click', () => rollIds(S.pool.map(p => p.id), true));
+  clearBtn.addEventListener('click', clearPool);
+  restoreBtn.addEventListener('click', () => { S.spent = {}; renderTally(); save(); });
+  chips.addEventListener('click', e => {
+    const c = e.target.closest('.chip'); if (c) spend(c.dataset.k, c);
+  });
+
+  /* ---------- reflective metal: tilt, pointer, or slow ambient drift ---------- */
+  const root = document.documentElement;
+  const tgt = { x: 0, y: 0 }, cur = { x: 0, y: 0 };
+  let lastInput = -1e9, sensorLive = false;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  window.addEventListener('deviceorientation', e => {
+    if (e.beta == null || e.gamma == null) return;
+    sensorLive = true;
+    tgt.x = clamp(e.gamma / 35, -1.4, 1.4);
+    tgt.y = clamp((e.beta - 50) / 30, -1.4, 1.4);
+    lastInput = performance.now();
+  });
+  window.addEventListener('pointermove', e => {
+    if (sensorLive) return;
+    tgt.x = (e.clientX / innerWidth - .5) * 2.2;
+    tgt.y = (e.clientY / innerHeight - .5) * 1.6;
+    lastInput = performance.now();
+  }, { passive: true });
+
+  // iOS asks for motion access; only possible from a tap, and only outside embedded frames
+  let askedMotion = false;
+  window.addEventListener('click', () => {
+    if (askedMotion) return; askedMotion = true;
+    const D = window.DeviceOrientationEvent;
+    if (D && typeof D.requestPermission === 'function') {
+      try { D.requestPermission().catch(() => {}); } catch (e) {}
+    }
+  }, { capture: true });
+
+  let lastSx = 9, lastRefl = 9;
+  function frame(t) {
+    if (t - lastInput > 3500) {
+      // nobody tilting: let the light wander so reflections still come and go
+      const k = reduceMotion ? 0 : 1;
+      tgt.x = k * Math.sin(t / 4300) * 1.15;
+      tgt.y = k * Math.sin(t / 6700 + 1.3) * .55;
+    }
+    const ease = t - lastInput > 3500 ? .03 : .12;
+    cur.x += (tgt.x - cur.x) * ease;
+    cur.y += (tgt.y - cur.y) * ease;
+    const sx = clamp(cur.x * .85 + cur.y * .6, -1.6, 1.6);
+    const refl = .04 + .62 * Math.exp(-(sx * sx) / .05);
+    if (Math.abs(sx - lastSx) > .002 || Math.abs(refl - lastRefl) > .004) {
+      lastSx = sx; lastRefl = refl;
+      root.style.setProperty('--sx', sx.toFixed(3));
+      root.style.setProperty('--refl', refl.toFixed(3));
+      root.style.setProperty('--rx', (cur.x * 5).toFixed(1) + 'px');
+      root.style.setProperty('--ry', (cur.y * 3).toFixed(1) + 'px');
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* ---------- back button: first press stays, second leaves ---------- */
+  const toast = $('toast');
+  let toastT;
+  function showToast(msg) {
+    toast.textContent = msg; toast.classList.add('show');
+    clearTimeout(toastT); toastT = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  try {
+    if (window.top === window) {
+      history.pushState({ dice: 1 }, '');
+      let lastBack = 0;
+      window.addEventListener('popstate', () => {
+        const now = Date.now();
+        if (now - lastBack < 2000) { history.back(); return; }
+        lastBack = now;
+        history.pushState({ dice: 1 }, '');
+        showToast('Dice saved. Press back again to leave.');
+      });
+    }
+  } catch (e) {}
+
+  /* ---------- start ---------- */
+  if (!S) {
+    // first visit: a sample pool, already rolled
+    S = { pool: [{ id: 1, c: 'blue', f: rnd6() }, { id: 2, c: 'green', f: rnd6() }, { id: 3, c: 'white', f: rnd6() }], spent: {}, nid: 4 };
+    save();
+  }
+  renderAll();
+})();
+</script>
+</body>
+</html>
