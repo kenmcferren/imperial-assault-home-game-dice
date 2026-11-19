@@ -206,7 +206,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   transform: translate3d(calc(var(--sx) * 33.33%), 0, 0);
   will-change: transform;
 }
-.tray-scroll { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.tray-scroll { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .grid {
   --ds: 74px;
   display: grid;
@@ -308,6 +308,8 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   transition: opacity .15s, transform .08s;
 }
 .chip:active { transform: scale(.97); }
+.chip.static { cursor: default; }
+.chip.static:active { transform: none; }
 .chip svg { flex: 0 0 auto; width: 28px; height: 28px; fill: var(--ink); }
 .chip.acc svg { fill: none; stroke: var(--amber); }
 .chip .txt { display: flex; flex-direction: column; min-width: 0; }
@@ -334,6 +336,78 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   transition: opacity .2s, transform .2s; pointer-events: none;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- saved pools hotbar ---------- */
+.hotbar {
+  display: flex; gap: 8px; align-items: center;
+  overflow-x: auto; scrollbar-width: none;
+  padding-block: 2px; margin-top: -2px;
+}
+.hotbar::-webkit-scrollbar { display: none; }
+.preset {
+  flex: 0 0 auto;
+  display: flex; flex-wrap: wrap; align-content: center; gap: 3px;
+  max-width: calc(6 * 11px + 5 * 3px + 18px);
+  min-height: 34px; padding: 6px 8px; border-radius: 8px;
+  background: rgba(241,183,60,.16);
+  border: 1px solid rgba(241,183,60,.38);
+  box-shadow: 0 2px 6px rgba(0,0,0,.45);
+  touch-action: pan-x;
+  transition: transform .1s, background .15s;
+}
+.preset:active { background: rgba(241,183,60,.26); }
+.preset.holding { background: rgba(241,183,60,.32); transform: scale(.93); transition: transform .55s, background .55s; }
+.preset.flash { animation: flash .8s ease-out; }
+@keyframes flash { 0%, 100% { background: rgba(241,183,60,.16); } 25% { background: rgba(241,183,60,.6); } }
+.sq { width: 11px; height: 11px; border-radius: 2px; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 1px rgba(0,0,0,.5); }
+.sq.red    { background: #e3221f; }
+.sq.blue   { background: #2f68c6; }
+.sq.green  { background: #1bc414; }
+.sq.yellow { background: #f2c31f; }
+.sq.black  { background: #0a0a0a; box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 1px 1px rgba(0,0,0,.5); }
+.sq.white  { background: #eeeeee; }
+
+/* the "+" that sits where the next die would go */
+.save-slot { display: grid; place-items: center; width: var(--ds); height: var(--ds); }
+.save {
+  width: 50%; height: 50%; border-radius: 22%;
+  display: grid; place-items: center;
+  border: 2px dashed rgba(241,183,60,.6);
+  background: rgba(241,183,60,.08);
+  color: var(--amber);
+  transition: transform .08s, background .15s;
+}
+.save svg { width: 60%; height: 60%; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; fill: none; }
+.save:active { transform: scale(.9); background: rgba(241,183,60,.22); }
+
+/* ---------- delete modal ---------- */
+.modal {
+  position: fixed; inset: 0; z-index: 30;
+  display: grid; place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: rgba(0,0,0,.62);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.modal-card {
+  width: min(320px, 100%);
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 20px; border-radius: 14px;
+  background: linear-gradient(180deg, #24282e, #15181c);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 20px 50px rgba(0,0,0,.8);
+}
+.modal-card h2 { margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 20px; letter-spacing: .1em; text-transform: uppercase; }
+.modal-card p { margin: 0; color: var(--ink-dim); font-size: 15px; line-height: 1.4; }
+.modal-pool {
+  display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; border-radius: 8px;
+  background: rgba(241,183,60,.16); border: 1px solid rgba(241,183,60,.38);
+}
+.modal-pool .sq { width: 18px; height: 18px; border-radius: 3px; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions button { flex: 1; height: 44px; border-radius: 10px; font-weight: 700; font-size: 16px; letter-spacing: .14em; text-transform: uppercase; }
+.btn-cancel { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); }
+.btn-delete { background: #b8231d; color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 6px rgba(0,0,0,.5); }
 
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -384,6 +458,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   </header>
 
   <section class="rack" id="rack" aria-label="Add dice to your pool"></section>
+  <section class="hotbar" id="hotbar" aria-label="Saved pools" hidden></section>
 
   <section class="tray-wrap" aria-label="Dice pool">
     <div class="tray-scroll" id="tray">
@@ -405,6 +480,17 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   <p class="sr" id="live" aria-live="polite"></p>
 </main>
 <div class="toast" id="toast" role="status"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+  <div class="modal-card">
+    <h2 id="modal-title">Delete saved pool?</h2>
+    <div class="modal-pool" id="modal-pool"></div>
+    <p>It will be removed from your hotbar. The dice on the tray stay as they are.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modal-cancel" type="button">Cancel</button>
+      <button class="btn-delete" id="modal-delete" type="button">Delete</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -425,6 +511,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   const NAME = { a: 'Accuracy', d: 'Damage', s: 'Surge', b: 'Block', e: 'Evade', x: 'Dodge' };
   const SYMS = ['d', 's', 'b', 'e', 'x'];
   const MAX_POOL = 12;
+  const MAX_PRESETS = 10;
   const KEY = 'assault-dice-tray-v1';
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -446,7 +533,12 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
       if (!j || !Array.isArray(j.pool)) return null;
       j.pool = j.pool.filter(p => DICE[p.c] && (p.f === null || (p.f >= 0 && p.f < 6))).slice(0, MAX_POOL);
       j.spent = j.spent || {};
+      delete j.spent.a; // accuracy is never spent
       j.nid = j.nid || (Math.max(0, ...j.pool.map(p => p.id)) + 1);
+      j.presets = (Array.isArray(j.presets) ? j.presets : [])
+        .filter(p => p && Array.isArray(p.dice) && p.dice.length && p.dice.every(c => DICE[c]))
+        .slice(0, MAX_PRESETS);
+      j.pid = j.pid || (Math.max(0, ...j.presets.map(p => p.id || 0)) + 1);
       return j;
     } catch (e) { return null; }
   }
@@ -512,7 +604,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
 
   /* ---------- rendering ---------- */
   const $ = id => document.getElementById(id);
-  const rack = $('rack'), grid = $('grid'), empty = $('empty'), chips = $('chips');
+  const rack = $('rack'), hotbar = $('hotbar'), grid = $('grid'), empty = $('empty'), chips = $('chips');
   const rollBtn = $('roll'), clearBtn = $('clear'), restoreBtn = $('restore'), hint = $('hint'), live = $('live');
 
   function renderRack() {
@@ -543,9 +635,10 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
     </div>`;
   }
 
-  function renderTray(freshId) {
+  function renderTray(fresh) {
     grid.classList.toggle('many', S.pool.length > 8);
-    grid.innerHTML = S.pool.map(p => slotHTML(p, p.id === freshId && !reduceMotion)).join('');
+    grid.innerHTML = S.pool.map(p => slotHTML(p, !!fresh && fresh.has(p.id) && !reduceMotion)).join('') +
+      (S.pool.length ? `<div class="save-slot"><button class="save" type="button" aria-label="Save this pool to the hotbar"><svg viewBox="0 0 20 20"><path d="M10 3.5v13M3.5 10h13"/></svg></button></div>` : '');
     empty.hidden = S.pool.length > 0;
     const n = S.pool.length;
     rollBtn.disabled = n === 0;
@@ -555,6 +648,13 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   }
 
   function chipHTML(k, cur, base) {
+    if (k === 'a') {
+      // accuracy is reported, never spent
+      return `<div class="chip acc static" role="group" aria-label="Accuracy ${base}">
+        <svg viewBox="0 0 100 100"><use href="#${ICON.a}"/></svg>
+        <span class="txt"><span class="n">${base}</span><span class="name">${NAME.a}</span></span>
+      </div>`;
+    }
     const zero = cur === 0 ? ' zero' : '';
     const spent = cur < base ? ' spent' : '';
     return `<button class="chip${k === 'a' ? ' acc' : ''}${zero}${spent}" type="button" data-k="${k}" aria-label="${NAME[k]} ${cur}${cur < base ? ` of ${base}` : ''}. Tap to reduce by one.">
@@ -580,11 +680,121 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
     } else {
       chips.innerHTML = keys.map(k => chipHTML(k, Math.max(0, base[k] - (S.spent[k] || 0)), base[k])).join('');
     }
-    restoreBtn.hidden = !Object.values(S.spent).some(v => v > 0);
+    restoreBtn.hidden = !SYMS.some(k => (S.spent[k] || 0) > 0);
     live.textContent = keys.map(k => `${NAME[k]} ${Math.max(0, base[k] - (S.spent[k] || 0))}`).join(', ') || 'Blank roll';
   }
 
-  function renderAll(freshId) { renderRack(); renderTray(freshId); renderTally(); }
+  /* ---------- saved pools ---------- */
+  const byRack = (a, b) => COLORS.indexOf(a) - COLORS.indexOf(b);
+  const poolKey = dice => dice.slice().sort(byRack).join(',');
+  const squares = dice => dice.map(c => `<span class="sq ${c}"></span>`).join('');
+  function describe(dice) {
+    const n = {};
+    for (const c of dice) n[c] = (n[c] || 0) + 1;
+    return COLORS.filter(c => n[c]).map(c => `${n[c]} ${c}`).join(', ');
+  }
+  function renderHotbar() {
+    hotbar.hidden = S.presets.length === 0;
+    hotbar.innerHTML = S.presets.map(p =>
+      `<button class="preset" type="button" data-pid="${p.id}" aria-label="Load saved pool: ${describe(p.dice)}. Press and hold to delete.">${squares(p.dice)}</button>`
+    ).join('');
+  }
+  function flashPreset(pid) {
+    const b = hotbar.querySelector(`.preset[data-pid="${pid}"]`);
+    if (!b) return;
+    b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
+    try { b.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }); } catch (e) {}
+  }
+  function savePool() {
+    if (busy || !S.pool.length) return;
+    const dice = S.pool.map(p => p.c).sort(byRack);
+    const key = dice.join(',');
+    const dup = S.presets.find(p => poolKey(p.dice) === key);
+    if (dup) { flashPreset(dup.id); showToast('This pool is already saved.'); return; }
+    if (S.presets.length >= MAX_PRESETS) { showToast('Hotbar is full. Hold a saved pool to delete it.'); return; }
+    const id = S.pid++;
+    S.presets.push({ id, dice });
+    renderHotbar();
+    flashPreset(id);
+    save();
+    buzz(10);
+  }
+  function loadPreset(pid) {
+    if (busy) return;
+    const p = S.presets.find(q => q.id === pid);
+    if (!p) return;
+    S.pool = p.dice.map(c => ({ id: S.nid++, c, f: null }));
+    S.spent = {};
+    renderAll(new Set(S.pool.map(d => d.id)));
+    save();
+    buzz(8);
+  }
+
+  // press and hold a saved pool to delete it
+  const modal = $('modal'), modalPool = $('modal-pool');
+  let pendingDelete = null, modalOpenedAt = 0;
+  function openDelete(pid) {
+    const p = S.presets.find(q => q.id === pid);
+    if (!p || !modal.hidden) return;
+    pendingDelete = pid;
+    modalPool.innerHTML = squares(p.dice);
+    modal.hidden = false;
+    modalOpenedAt = performance.now();
+    $('modal-cancel').focus({ preventScroll: true });
+  }
+  function closeModal() { modal.hidden = true; pendingDelete = null; }
+  $('modal-cancel').addEventListener('click', closeModal);
+  $('modal-delete').addEventListener('click', () => {
+    S.presets = S.presets.filter(p => p.id !== pendingDelete);
+    renderHotbar();
+    save();
+    closeModal();
+    showToast('Saved pool deleted.');
+  });
+  modal.addEventListener('click', e => {
+    // ignore the lift of the finger that opened the dialog
+    if (e.target === modal && performance.now() - modalOpenedAt > 450) closeModal();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+
+  let holdT = null, held = false, holdAt = null;
+  function cancelHold() {
+    clearTimeout(holdT); holdT = null; holdAt = null;
+    hotbar.querySelectorAll('.holding').forEach(b => b.classList.remove('holding'));
+  }
+  hotbar.addEventListener('pointerdown', e => {
+    const b = e.target.closest('.preset'); if (!b) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    held = false;
+    holdAt = { x: e.clientX, y: e.clientY };
+    b.classList.add('holding');
+    holdT = setTimeout(() => {
+      held = true;
+      cancelHold();
+      buzz(25);
+      openDelete(+b.dataset.pid);
+    }, 550);
+  });
+  hotbar.addEventListener('pointermove', e => {
+    if (holdAt && Math.hypot(e.clientX - holdAt.x, e.clientY - holdAt.y) > 10) cancelHold();
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => hotbar.addEventListener(t, cancelHold));
+  hotbar.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const b = e.target.closest('.preset'); if (!b) return;
+    if (!held) { held = true; cancelHold(); openDelete(+b.dataset.pid); }
+  });
+  hotbar.addEventListener('click', e => {
+    const b = e.target.closest('.preset'); if (!b) return;
+    if (held) { held = false; return; }
+    loadPreset(+b.dataset.pid);
+  });
+  hotbar.addEventListener('keydown', e => {
+    const b = e.target.closest('.preset');
+    if (b && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); openDelete(+b.dataset.pid); }
+  });
+
+  function renderAll(fresh) { renderRack(); renderHotbar(); renderTray(fresh); renderTally(); }
 
   /* ---------- actions ---------- */
   function addDie(c) {
@@ -593,7 +803,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
     S.pool.push({ id, c, f: null });
     // keep attack dice before defense dice, in rack order
     S.pool.sort((p, q) => COLORS.indexOf(p.c) - COLORS.indexOf(q.c) || p.id - q.id);
-    renderAll(id);
+    renderAll(new Set([id]));
     save();
     buzz(8);
   }
@@ -665,6 +875,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   }
 
   function spend(k, chip) {
+    if (k === 'a') return;
     const { base } = totals();
     const cur = base[k] - (S.spent[k] || 0);
     if (cur <= 0) return;
@@ -688,6 +899,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
     const b = e.target.closest('.pick'); if (b) addDie(b.dataset.c);
   });
   grid.addEventListener('click', e => {
+    if (e.target.closest('.save')) { savePool(); return; }
     const slot = e.target.closest('.slot'); if (!slot) return;
     const id = +slot.dataset.id;
     if (e.target.closest('.die-x')) removeDie(id);
@@ -697,7 +909,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   clearBtn.addEventListener('click', clearPool);
   restoreBtn.addEventListener('click', () => { S.spent = {}; renderTally(); save(); });
   chips.addEventListener('click', e => {
-    const c = e.target.closest('.chip'); if (c) spend(c.dataset.k, c);
+    const c = e.target.closest('button.chip'); if (c) spend(c.dataset.k, c);
   });
 
   /* ---------- reflective metal: tilt, pointer, or slow ambient drift ---------- */
@@ -778,7 +990,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
   /* ---------- start ---------- */
   if (!S) {
     // first visit: a sample pool, already rolled
-    S = { pool: [{ id: 1, c: 'blue', f: rnd6() }, { id: 2, c: 'green', f: rnd6() }, { id: 3, c: 'white', f: rnd6() }], spent: {}, nid: 4 };
+    S = { pool: [{ id: 1, c: 'blue', f: rnd6() }, { id: 2, c: 'green', f: rnd6() }, { id: 3, c: 'white', f: rnd6() }], spent: {}, nid: 4, presets: [], pid: 1 };
     save();
   }
   renderAll();
